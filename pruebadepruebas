@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simulador 1 - Capital del Ecuador</title>
+  <style>
+    body{font-family:system-ui,Arial;max-width:900px;margin:20px auto;padding:0 14px}
+    .card{border:1px solid #ddd;border-radius:16px;padding:16px;margin:14px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .pill{border:1px solid #ddd;border-radius:999px;padding:7px 12px}
+    .muted{color:#555}
+    button{padding:10px 14px;border:1px solid #ccc;border-radius:12px;background:#fff;cursor:pointer}
+    button.primary{border-color:#111}
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .opt{display:block;margin:10px 0;padding:12px 12px;border:1px solid #ddd;border-radius:14px;cursor:pointer}
+    .opt input{margin-right:10px}
+    .ok{font-weight:700}
+    .bad{font-weight:700}
+    .explain{margin-top:8px;padding:10px 12px;border:1px dashed #ccc;border-radius:14px}
+    .grid{display:grid;gap:10px;grid-template-columns:1fr}
+    /* Detalle final en una sola columna (filas seguidas) */
+  </style>
+</head>
+
+<body>
+  <h2>Simulador 1</h2>
+  <p class="muted">Tema: Capital del Ecuador</p>
+
+  <div class="card">
+    <div class="row">
+      <div class="pill">📌 Pregunta: <b id="pos">0</b>/<b id="total">0</b></div>
+      <div class="pill">✅ Correctas: <b id="ok">0</b></div>
+    </div>
+    <p class="muted">Intentos ilimitados. Preguntas en orden. Al final verás tu resultado y las respuestas correctas.</p>
+    <div class="row">
+      <button class="primary" id="startBtn">Iniciar intento</button>
+      <button id="retryBtn" disabled>Reintentar</button>
+    </div>
+  </div>
+
+  <div id="quiz"></div>
+
+  <script>
+    // === BANCO (EN ORDEN) ===
+    const BANK = [
+      {
+        text: "P1: LA CAPITAL DE ECUADOR ES",
+        options: { A:"QUITO", B:"GUAYAQUIL", C:"ESMERLADAS", D:"CUENCA" },
+        answer: "A",
+        explain: "Quito es la capital política y sede del gobierno del Ecuador."
+      },
+      {
+        text: "P2: LA CAPITAL DE ECUADOR ES",
+        options: { A:"QUITO", B:"GUAYAQUIL", C:"ESMERLADAS", D:"CUENCA" },
+        answer: "A",
+        explain: "Quito es la capital política y sede del gobierno del Ecuador."
+      },
+      {
+        text: "P3: LA CAPITAL DE ECUADOR ES",
+        options: { A:"QUITO", B:"GUAYAQUIL", C:"ESMERLADAS", D:"CUENCA" },
+        answer: "A",
+        explain: "Quito es la capital política y sede del gobierno del Ecuador."
+      },
+      {
+        text: "P4: LA CAPITAL DE ECUADOR ES",
+        options: { A:"QUITO", B:"GUAYAQUIL", C:"ESMERLADAS", D:"CUENCA" },
+        answer: "A",
+        explain: "Quito es la capital política y sede del gobierno del Ecuador."
+      },
+      {
+        text: "P5: LA CAPITAL DE ECUADOR ES",
+        options: { A:"QUITO", B:"GUAYAQUIL", C:"ESMERLADAS", D:"CUENCA" },
+        answer: "A",
+        explain: "Quito es la capital política y sede del gobierno del Ecuador."
+      }
+    ];
+
+    let attempt = null;
+
+    const elQuiz = document.getElementById("quiz");
+    const elPos = document.getElementById("pos");
+    const elTotal = document.getElementById("total");
+    const elOk = document.getElementById("ok");
+    const startBtn = document.getElementById("startBtn");
+    const retryBtn = document.getElementById("retryBtn");
+
+    function newAttempt(){
+      const questions = BANK.map(q => ({
+        text: q.text,
+        options: q.options,
+        correctKey: q.answer,
+        explain: q.explain || "",
+        chosenKey: null,
+        locked: false
+      }));
+
+      attempt = { i:0, ok:0, questions, finished:false };
+      elTotal.textContent = attempt.questions.length;
+      elOk.textContent = "0";
+      renderQuestion();
+
+      retryBtn.disabled = true;
+      startBtn.disabled = true;
+      startBtn.textContent = "Iniciar nuevo intento";
+    }
+
+    function finishAttempt(){
+      attempt.finished = true;
+
+      const total = attempt.questions.length;
+      const wrong = attempt.questions.filter(q => q.chosenKey !== q.correctKey);
+
+      const detailHtml = attempt.questions.map((q, idx) => {
+        const correctText = q.options[q.correctKey];
+        const chosenText  = q.chosenKey ? q.options[q.chosenKey] : "(Sin respuesta)";
+        const isOk = q.chosenKey === q.correctKey;
+
+        const explainBlock = (!isOk && q.explain)
+          ? `<div class="explain"><b>Explicación:</b> ${escapeHtml(q.explain)}</div>`
+          : "";
+
+        return `
+          <div class="card">
+            <h3>${idx+1}. ${escapeHtml(q.text)}</h3>
+            <p>${isOk ? "✅ <b>Correcto</b>" : "❌ <b>Incorrecto</b>"}</p>
+            <p><b>Tu respuesta:</b> ${q.chosenKey ? `${q.chosenKey}) ${escapeHtml(chosenText)}` : "(Sin respuesta)"}</p>
+            <p><b>Respuesta correcta:</b> ${q.correctKey}) ${escapeHtml(correctText)}</p>
+            ${explainBlock}
+          </div>
+        `;
+      }).join("");
+
+      elQuiz.innerHTML = `
+        <div class="card">
+          <h3>Resultado final</h3>
+          <p><b>Correctas:</b> ${attempt.ok} / ${total}</p>
+          <p><b>Incorrectas:</b> ${wrong.length}</p>
+          <p class="muted">Abajo tienes el detalle con la respuesta correcta y explicación (si aplica).</p>
+        </div>
+        <div class="grid">
+          ${detailHtml}
+        </div>
+      `;
+
+      startBtn.disabled = false;
+      retryBtn.disabled = false;
+    }
+
+    function renderQuestion(){
+      const q = attempt.questions[attempt.i];
+      elPos.textContent = String(attempt.i + 1);
+
+      elQuiz.innerHTML = `
+        <div class="card">
+          <h3>${escapeHtml(q.text)}</h3>
+          <form id="form">
+            ${Object.entries(q.options).map(([key, val]) => `
+              <label class="opt">
+                <input type="radio" name="opt" value="${key}" ${q.locked?'disabled':''}/>
+                <b>${key})</b> ${escapeHtml(val)}
+              </label>
+            `).join("")}
+
+            <div class="row" style="margin-top:12px">
+              <button type="button" id="checkBtn" class="primary" ${q.locked?'disabled':''}>Responder</button>
+              <button type="button" id="nextBtn" ${!q.locked?'disabled':''}>Siguiente</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.getElementById("checkBtn").onclick = () => {
+        const selected = document.querySelector('input[name="opt"]:checked');
+        if (!selected) return alert("Selecciona una opción.");
+
+        q.chosenKey = selected.value;
+        q.locked = true;
+
+        const correct = q.chosenKey === q.correctKey;
+        if (correct) attempt.ok++;
+        elOk.textContent = String(attempt.ok);
+
+        const card = elQuiz.querySelector(".card");
+        const p = document.createElement("p");
+
+        if (correct) {
+          p.className = "ok";
+          p.textContent = "✅ Correcto";
+        } else {
+          p.className = "bad";
+          p.innerHTML = `❌ Incorrecto. La correcta es <b>${q.correctKey}) ${escapeHtml(q.options[q.correctKey])}</b>.`;
+
+          if (q.explain) {
+            const ex = document.createElement("div");
+            ex.className = "explain";
+            ex.innerHTML = `<b>Explicación:</b> ${escapeHtml(q.explain)}`;
+            card.appendChild(ex);
+          }
+        }
+
+        card.appendChild(p);
+
+        document.getElementById("nextBtn").disabled = false;
+        document.getElementById("checkBtn").disabled = true;
+
+        card.querySelectorAll('input[name="opt"]').forEach(r => r.disabled = true);
+      };
+
+      document.getElementById("nextBtn").onclick = () => {
+        if (attempt.i < attempt.questions.length - 1) {
+          attempt.i++;
+          renderQuestion();
+        } else {
+          finishAttempt();
+        }
+      };
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    startBtn.onclick = () => newAttempt();
+    retryBtn.onclick = () => newAttempt();
+  </script>
+</body>
+</html>
